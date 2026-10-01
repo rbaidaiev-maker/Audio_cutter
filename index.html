@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0f">
+<title>MP3 Cutter</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif;color:#f5f5f7;background:#0b0c0f}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#111318,#08090b);min-height:100vh}
+.app{width:min(760px,100%);margin:auto;padding:24px 16px 40px}
+h1{font-size:32px;margin:10px 0 4px;letter-spacing:-1px}
+.sub{color:#969aa5;margin-bottom:24px}
+.card{background:#17191e;border:1px solid #292c34;border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:0 12px 35px #0005}
+input[type=file]{display:none}
+.pick,.btn{border:0;border-radius:14px;padding:14px 16px;font-size:16px;font-weight:650;cursor:pointer;font-family:inherit}
+.pick{display:block;text-align:center;background:#f2f2f4;color:#111;font-size:17px}
+.btn{background:#252932;color:#fff;width:100%}
+.btn.primary{background:#f2f2f4;color:#111;margin-top:14px}
+.btn.sm{padding:10px 4px;font-size:14px}
+.btn:disabled{opacity:.4}
+.name{font-size:18px;font-weight:650;word-break:break-word}
+.meta{color:#9da2ad;margin-top:4px;font-size:14px}
+audio{width:100%;margin:14px 0 4px}
+.lbl{font-size:13px;color:#9da2ad;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.tin{width:100%;background:#0d0f13;border:1px solid #2c303a;border-radius:12px;color:#fff;font-size:22px;padding:11px 12px;font-variant-numeric:tabular-nums;font-family:inherit}
+.row .btn{width:auto;padding:12px 14px;font-size:14px}
+.nudge{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.sum{margin-top:16px;padding:12px;border-radius:12px;background:#0d0f13;text-align:center;font-variant-numeric:tabular-nums;color:#cfd2d9}
+.bar{height:8px;background:#0d0f13;border-radius:6px;overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;width:0;background:#f2f2f4;transition:width .15s}
+.status{margin:0 4px 14px;color:#9da2ad;min-height:20px;word-break:break-word}
+.small{font-size:13px;color:#a8acb5;margin-top:12px;line-height:1.4}
+.prow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid #292c34;font-size:14px;color:#cfd2d9}
+.prow .btn{width:auto;padding:10px 14px;font-size:14px}
+.prow small{display:block;color:#9da2ad;margin-top:2px}
+.prog{position:sticky;top:8px;z-index:5;margin-top:14px;padding:12px 14px;border-radius:12px;background:#0d0f13;border:1px solid #3a3f4b;box-shadow:0 8px 24px #000a}
+.ptop{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:#e6e8ee;line-height:1.35}
+.ppct{font-variant-numeric:tabular-nums;color:#fff;font-weight:650;white-space:nowrap}
+.prog .bar{background:#252932}
+.bar.ind i{width:35%!important;animation:ind 1.1s ease-in-out infinite alternate}
+@keyframes ind{from{margin-left:0}to{margin-left:65%}}
+.split{margin-top:22px;padding-top:6px;border-top:1px solid #292c34}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>MP3 Cutter</h1>
+  <div class="sub">Різання MP3 без перекодування. Працює навіть з файлами на сотні МБ. Усе — на пристрої.</div>
+
+  <div class="card">
+    <label class="pick" for="file">＋ Вибрати MP3</label>
+    <input id="file" type="file" accept="audio/mpeg,.mp3">
+    <div class="bar" id="bar" style="display:none"><i id="barI"></i></div>
+  </div>
+
+  <div class="status" id="statusMsg"></div>
+
+  <div id="editor" class="card" style="display:none">
+    <div class="name" id="name"></div>
+    <div class="meta" id="meta"></div>
+
+    <audio id="audio" controls preload="metadata"></audio>
+
+    <div class="lbl">Початок</div>
+    <div class="row">
+      <input class="tin" id="startIn" inputmode="decimal" autocomplete="off" value="0:00.000">
+      <button class="btn" id="startHere">⬇ З плеєра</button>
+    </div>
+    <div class="nudge" data-for="start">
+      <button class="btn sm" data-d="-1">−1с</button><button class="btn sm" data-d="-0.1">−0.1</button>
+      <button class="btn sm" data-d="0.1">+0.1</button><button class="btn sm" data-d="1">+1с</button>
+    </div>
+
+    <div class="lbl">Кінець</div>
+    <div class="row">
+      <input class="tin" id="endIn" inputmode="decimal" autocomplete="off" value="0:00.000">
+      <button class="btn" id="endHere">⬇ З плеєра</button>
+    </div>
+    <div class="nudge" data-for="end">
+      <button class="btn sm" data-d="-1">−1с</button><button class="btn sm" data-d="-0.1">−0.1</button>
+      <button class="btn sm" data-d="0.1">+0.1</button><button class="btn sm" data-d="1">+1с</button>
+    </div>
+
+    <div class="sum" id="sum"></div>
+
+    <div class="two">
+      <button class="btn" id="playSel">▶ Прослухати вибране</button>
+      <button class="btn" id="playEnd">▶ Останні 5 с</button>
+    </div>
+    <button class="btn primary" id="export">✂ Обрізати та зберегти MP3</button>
+    <button class="btn" id="share" style="margin-top:10px;display:none">⇪ Поділитись / зберегти у Файли</button>
+
+    <div class="split">
+      <div class="lbl">Розрізати весь файл на частини</div>
+      <div class="row">
+        <input class="tin" id="partMin" inputmode="decimal" autocomplete="off" value="60" style="font-size:20px">
+        <button class="btn" id="splitBtn">✂ Розрізати (хв)</button>
+      </div>
+      <div class="small" style="margin-top:6px">Довжина кожної частини в хвилинах. Остання частина буде коротшою, якщо файл не ділиться націло.</div>
+      <div class="prog" id="prog" style="display:none">
+        <div class="ptop"><span id="ptxt"></span><span class="ppct" id="ppct"></span></div>
+        <div class="bar" id="pbarWrap"><i id="pbar"></i></div>
+      </div>
+      <div id="parts"></div>
+    </div>
+
+    <div class="small">
+      Як користуватись: перемотай плеєр на потрібне місце і натисни «З плеєра» для початку та кінця. Точніше підлаштуй кнопками ±
+      або впиши час вручну (наприклад <b>1:23:45.5</b>). Різання йде по MP3-кадрах (~26 мс), тож без втрати якості.
+      Якщо в файлі змінний бітрейт (VBR) без заголовка, позиція плеєра може трохи розходитись із реальним часом — перевіряй кнопкою «Прослухати вибране».
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+function showMsg(x){$('statusMsg').textContent=x||''}
+window.addEventListener('error',e=>showMsg('JS помилка: '+e.message));
+window.addEventListener('unhandledrejection',e=>showMsg('Помилка: '+((e.reason&&e.reason.message)||e.reason)));
+
+let file=null, offs=[], endByte=0, frameDur=0, duration=0, start=0, end=0, objUrl=null, raf=0, lastBlob=null, lastName='';
+const audio=$('audio');
+
+function fmt(s){
+  s=Math.max(0,s);
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), sec=Math.floor(s%60), ms=Math.round((s%1)*1000);
+  const mm=h?String(m).padStart(2,'0'):String(m);
+  const base=mm+':'+String(sec).padStart(2,'0')+'.'+String(ms>999?999:ms).padStart(3,'0');
+  return h?h+':'+base:base;
+}
+function parseTime(t){
+  t=String(t).trim().replace(',','.');
+  if(!t)return NaN;
+  const p=t.split(':');
+  if(p.length>3)return NaN;
+  let s=0;
+  for(const x of p){ if(!/^\d*\.?\d*$/.test(x)||x==='')return NaN; s=s*60+parseFloat(x); }
+  return s;
+}
+
+/* ---------- MP3 parsing ---------- */
+const BR1=[0,32,40,48,56,64,80,96,112,128,160,192,224,256,320];
+const BR2=[0,8,16,24,32,40,48,56,64,80,96,112,128,144,160];
+const SR={3:[44100,48000,32000],2:[22050,24000,16000],0:[11025,12000,8000]};
+function parseHeader(w,i){
+  if(w[i]!==0xFF||(w[i+1]&0xE0)!==0xE0)return null;
+  const ver=(w[i+1]>>3)&3, layer=(w[i+1]>>1)&3;
+  if(ver===1||layer!==1)return null;           // тільки MPEG Layer III
+  const bi=(w[i+2]>>4)&15, si=(w[i+2]>>2)&3, pad=(w[i+2]>>1)&1;
+  if(bi===0||bi===15||si===3)return null;
+  const br=(ver===3?BR1:BR2)[bi], sr=SR[ver][si];
+  const len=ver===3?Math.floor(144000*br/sr)+pad:Math.floor(72000*br/sr)+pad;
+  return {ver,sr,len,spf:ver===3?1152:576,mono:((w[i+3]>>6)&3)===3,crc:(w[i+1]&1)===0};
+}
+
+async function scan(f,onp){
+  const size=f.size, CH=8*1024*1024;
+  let win=new Uint8Array(0), ws=0;
+  async function ensure(p,n){
+    if(p>=ws&&p+n<=ws+win.length)return true;
+    if(p>=ws&&p+n>size&&ws+win.length>=size)return false;
+    ws=p; win=new Uint8Array(await f.slice(p,Math.min(size,p+CH)).arrayBuffer());
+    return p+n<=ws+win.length;
+  }
+  let pos=0;
+  if(await ensure(0,10)&&win[0]===0x49&&win[1]===0x44&&win[2]===0x33){
+    const sz=((win[6]&127)<<21)|((win[7]&127)<<14)|((win[8]&127)<<7)|(win[9]&127);
+    pos=10+sz+((win[5]&0x10)?10:0);
+  }
+  const out=[]; let ref=null, lastEnd=0, n=0;
+  while(pos+4<=size){
+    if(!(await ensure(pos,4)))break;
+    const h=parseHeader(win,pos-ws);
+    if(!h||(ref&&(h.ver!==ref.ver||h.sr!==ref.sr))){pos++;continue;}
+    const np=pos+h.len;
+    let ok=false;
+    if(np+4>size)ok=true;
+    else if(await ensure(np,4)){
+      const i=np-ws, h2=parseHeader(win,i);
+      ok=(!!h2&&h2.sr===h.sr&&h2.ver===h.ver)||(win[i]===0x54&&win[i+1]===0x41&&win[i+2]===0x47);
+    }
+    if(!ok){pos++;continue;}
+    if(!ref){
+      ref=h;
+      // перший кадр може бути службовим (Xing/Info/VBRI) — без звуку
+      if(await ensure(pos,Math.min(h.len,80))){
+        const base=pos-ws+4+(h.crc?2:0)+(h.ver===3?(h.mono?17:32):(h.mono?9:17));
+        const tag=String.fromCharCode(win[base],win[base+1],win[base+2],win[base+3]);
+        const vbri=String.fromCharCode(win[pos-ws+36],win[pos-ws+37],win[pos-ws+38],win[pos-ws+39]);
+        if(tag==='Xing'||tag==='Info'||vbri==='VBRI'){pos=np;continue;}
+      }
+    }
+    out.push(pos); lastEnd=Math.min(np,size); pos=np;
+    if(++n%4000===0){onp(pos/size); await new Promise(r=>setTimeout(r));}
+  }
+  if(out.length<2)throw new Error('не знайдено MP3-кадрів (це точно MP3?)');
+  return {offs:out,ref,endByte:lastEnd};
+}
+
+/* ---------- UI ---------- */
+function refresh(){
+  $('startIn').value=fmt(start); $('endIn').value=fmt(end);
+  $('sum').textContent='Вибрано: '+fmt(end-start)+'  (з '+fmt(duration)+')';
+}
+function setStart(t){ if(isNaN(t))return refresh(); start=Math.min(Math.max(0,t),end-frameDur); refresh(); }
+function setEnd(t){ if(isNaN(t))return refresh(); end=Math.max(Math.min(duration,t),start+frameDur); refresh(); }
+
+$('file').addEventListener('change',async()=>{
+  const f=$('file').files[0]; if(!f)return;
+  audio.pause(); cancelAnimationFrame(raf);
+  $('editor').style.display='none';
+  const bar=$('bar'); bar.style.display='block'; $('barI').style.width='0';
+  showMsg('Аналіз файлу ('+(f.size/1048576).toFixed(1)+' МБ)…');
+  try{
+    const r=await scan(f,p=>{ $('barI').style.width=(p*100).toFixed(1)+'%'; showMsg('Аналіз файлу… '+Math.round(p*100)+'%'); });
+    file=f; offs=r.offs; endByte=r.endByte;
+    frameDur=r.ref.spf/r.ref.sr; duration=offs.length*frameDur;
+    start=0; end=duration;
+    $('name').textContent=f.name;
+    $('meta').textContent='Тривалість '+fmt(duration)+' · '+r.ref.sr+' Гц · '+(f.size/1048576).toFixed(1)+' МБ';
+    if(objUrl)URL.revokeObjectURL(objUrl);
+    objUrl=URL.createObjectURL(f); audio.src=objUrl;
+    $('share').style.display=(navigator.canShare&&navigator.share)?'block':'none';
+    refresh(); $('editor').style.display='block';
+    showMsg('Готово.');
+    $('editor').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    console.error(e); showMsg('Не вдалося обробити файл: '+(e.message||e));
+  }finally{ bar.style.display='none'; }
+});
+
+$('startIn').addEventListener('change',e=>setStart(parseTime(e.target.value)));
+$('endIn').addEventListener('change',e=>setEnd(parseTime(e.target.value)));
+$('startHere').addEventListener('click',()=>setStart(audio.currentTime));
+$('endHere').addEventListener('click',()=>setEnd(audio.currentTime));
+document.querySelectorAll('.nudge').forEach(box=>{
+  box.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    const d=parseFloat(b.dataset.d);
+    if(box.dataset.for==='start'){ setStart(start+d); audio.currentTime=start; }
+    else { setEnd(end+d); audio.currentTime=Math.max(0,end-2); }
+  }));
+});
+
+function watch(){
+  cancelAnimationFrame(raf);
+  const tick=()=>{
+    if(audio.paused)return;
+    if(audio.currentTime>=end){audio.pause();return;}
+    raf=requestAnimationFrame(tick);
+  };
+  raf=requestAnimationFrame(tick);
+}
+async function playFrom(t){
+  audio.currentTime=t;
+  try{await audio.play();watch();}catch(e){showMsg('Не вдалося відтворити: '+e.message)}
+}
+$('playSel').addEventListener('click',()=>playFrom(start));
+$('playEnd').addEventListener('click',()=>playFrom(Math.max(start,end-5)));
+
+/* ---------- Експорт: просто копіюємо байти кадрів ---------- */
+function buildBlob(){
+  const i0=Math.max(0,Math.floor(start/frameDur+1e-6));
+  const i1=Math.min(offs.length,Math.max(i0+1,Math.ceil(end/frameDur-1e-6)));
+  const a=offs[i0], b=i1<offs.length?offs[i1]:endByte;
+  lastName=file.name.replace(/\.mp3$/i,'')+'-cut-'+Math.round(start)+'-'+Math.round(end)+'.mp3';
+  return new Blob([file.slice(a,b)],{type:'audio/mpeg'});
+}
+$('export').addEventListener('click',()=>{
+  if(!file)return;
+  audio.pause();
+  try{
+    lastBlob=buildBlob();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(lastBlob); a.download=lastName;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+    showMsg('Готово: '+lastName+' ('+(lastBlob.size/1048576).toFixed(2)+' МБ)');
+  }catch(e){showMsg('Помилка експорту: '+e.message)}
+});
+$('share').addEventListener('click',async()=>{
+  try{
+    lastBlob=buildBlob();
+    const f=new File([lastBlob],lastName,{type:'audio/mpeg'});
+    if(navigator.canShare({files:[f]}))await navigator.share({files:[f]});
+    else showMsg('Поділитись цим файлом не вдається — використай кнопку «Обрізати та зберегти».');
+  }catch(e){ if(e.name!=='AbortError')showMsg('Помилка: '+e.message); }
+});
+
+/* ---------- Розрізання на частини ---------- */
+let parts=[];
+function downloadBlob(blob,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+// Панель прогресу: p = 0..1, або null для «невідомо скільки» (анімована смужка)
+function prog(text,p){
+  $('prog').style.display='block';
+  $('ptxt').textContent=text;
+  const w=$('pbarWrap');
+  if(p==null){ w.classList.add('ind'); $('ppct').textContent=''; }
+  else { w.classList.remove('ind'); $('pbar').style.width=(p*100).toFixed(1)+'%'; $('ppct').textContent=Math.round(p*100)+'%'; }
+}
+function setBusy(b){
+  $('parts').querySelectorAll('button').forEach(x=>x.disabled=b);
+  $('splitBtn').disabled=b; $('export').disabled=b;
+}
+// Читаємо частину файлу шматками, щоб бачити реальний прогрес
+async function readPart(p,onp){
+  const chunks=[], CH=4*1024*1024;
+  for(let o=0;o<p.blob.size;o+=CH){
+    chunks.push(await p.blob.slice(o,o+CH).arrayBuffer());
+    onp(Math.min(1,(o+CH)/p.blob.size));
+  }
+  return new Blob(chunks,{type:'audio/mpeg'});
+}
+const mb=n=>(n/1048576).toFixed(1)+' МБ';
+
+$('splitBtn').addEventListener('click',()=>{
+  if(!file)return;
+  audio.pause();
+  const mins=parseFloat(String($('partMin').value).replace(',','.'));
+  if(!(mins>=0.1)){showMsg('Вкажи кількість хвилин (більше 0).');return;}
+  const fpp=Math.max(1,Math.round(mins*60/frameDur));
+  const n=Math.ceil(offs.length/fpp);
+  if(n>200){showMsg('Занадто багато частин ('+n+'). Збільш довжину частини.');return;}
+  const base=file.name.replace(/\.mp3$/i,'');
+  const pad=Math.max(2,String(n).length);
+  parts=[];
+  for(let k=0;k<n;k++){
+    const i0=k*fpp, i1=Math.min(offs.length,i0+fpp);
+    const a=offs[i0], b=i1<offs.length?offs[i1]:endByte;
+    parts.push({
+      name:base+'-part'+String(k+1).padStart(pad,'0')+'-of-'+n+'.mp3',
+      blob:file.slice(a,b,'audio/mpeg'), t0:i0*frameDur, t1:i1*frameDur
+    });
+  }
+  renderParts();
+  showMsg(n===1?'Файл коротший за вказану довжину — вийде одна частина.':'Створено частин: '+n+'.');
+});
+
+function renderParts(){
+  const box=$('parts'); box.innerHTML='';
+  if(!parts.length)return;
+  const top=document.createElement('div'); top.className='two';
+  const bAll=document.createElement('button'); bAll.className='btn'; bAll.textContent='⬇ Завантажити всі по черзі';
+  const bZip=document.createElement('button'); bZip.className='btn'; bZip.textContent='🗜 Усе одним ZIP';
+  top.append(bAll,bZip); box.append(top);
+  bAll.addEventListener('click',async()=>{
+    setBusy(true);
+    try{
+      const n=parts.length;
+      for(let i=0;i<n;i++){
+        const lbl='Частина '+(i+1)+' з '+n+': читання файлу…';
+        prog(lbl,i/n); await sleep(30);
+        const b=await readPart(parts[i],x=>prog(lbl,(i+x)/n));
+        prog('Частина '+(i+1)+' з '+n+': передаю браузеру…',(i+1)/n);
+        downloadBlob(b,parts[i].name);
+        await sleep(1500);
+      }
+      prog('✓ Усі частини передано на завантаження. Якщо браузер пропустив якісь — натисни «⬇» біля потрібної.',1);
+    }catch(e){prog('Помилка: '+e.message,0)}
+    setBusy(false);
+  });
+  bZip.addEventListener('click',async()=>{
+    setBusy(true);
+    try{
+      prog('ZIP · крок 1 з 2: підрахунок контрольних сум…',0); await sleep(30);
+      const blob=await makeZip();
+      prog('ZIP · крок 2 з 2: передаю архів браузеру (для великих файлів це може тривати кілька секунд)…',null);
+      await sleep(50);
+      downloadBlob(blob,file.name.replace(/\.mp3$/i,'')+'-parts.zip');
+      await sleep(1500);
+      prog('✓ ZIP готовий ('+mb(blob.size)+'). Шукай його в завантаженнях.',1);
+    }catch(e){prog('Помилка ZIP: '+e.message,0)}
+    setBusy(false);
+  });
+  parts.forEach((p,i)=>{
+    const row=document.createElement('div'); row.className='prow';
+    const info=document.createElement('div');
+    info.textContent='Частина '+(i+1)+' · '+fmt(p.t0)+' – '+fmt(p.t1);
+    const sm=document.createElement('small'); sm.textContent=mb(p.blob.size); info.append(sm);
+    const b=document.createElement('button'); b.className='btn'; b.textContent='⬇';
+    b.addEventListener('click',async()=>{
+      setBusy(true);
+      try{
+        const lbl='Частина '+(i+1)+' з '+parts.length+': читання файлу…';
+        prog(lbl,0); await sleep(30);
+        const blob=await readPart(p,x=>prog(lbl,x));
+        prog('Частина '+(i+1)+': передаю браузеру…',1); await sleep(50);
+        downloadBlob(blob,p.name);
+        await sleep(800);
+        prog('✓ Частина '+(i+1)+' готова ('+mb(blob.size)+'). Шукай у завантаженнях.',1);
+      }catch(e){prog('Помилка: '+e.message,0)}
+      setBusy(false);
+    });
+    row.append(info,b); box.append(row);
+  });
+}
+
+/* ZIP без стиснення (MP3 і так стиснутий) — збирається з посилань на шматки файлу, без копіювання в пам'ять */
+const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+async function crcBlob(blob,onp){
+  let c=0xFFFFFFFF; const CH=4*1024*1024;
+  for(let p=0;p<blob.size;p+=CH){
+    const u=new Uint8Array(await blob.slice(p,p+CH).arrayBuffer());
+    for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);
+    onp(p);
+  }
+  return (c^0xFFFFFFFF)>>>0;
+}
+async function makeZip(){
+  const enc=new TextEncoder(), d=new Date();
+  const dt=((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF;
+  const dd=(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF;
+  const total=parts.reduce((s,p)=>s+p.blob.size,0);
+  if(total>3.9e9)throw new Error('архів завеликий (понад ~4 ГБ) — завантажуй частини окремо');
+  let done=0, off=0; const body=[], central=[];
+  for(let idx=0;idx<parts.length;idx++){
+    const p=parts[idx], size=p.blob.size;
+    const crc=await crcBlob(p.blob,pos=>prog('ZIP · крок 1 з 2: контрольні суми, файл '+(idx+1)+' з '+parts.length+'…',(done+pos)/total));
+    done+=size;
+    const nm=enc.encode(p.name);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+    lh.setUint16(10,dt,true); lh.setUint16(12,dd,true); lh.setUint32(14,crc,true);
+    lh.setUint32(18,size,true); lh.setUint32(22,size,true); lh.setUint16(26,nm.length,true); lh.setUint16(28,0,true);
+    body.push(lh.buffer,nm,p.blob);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+    ch.setUint16(12,dt,true); ch.setUint16(14,dd,true); ch.setUint32(16,crc,true);
+    ch.setUint32(20,size,true); ch.setUint32(24,size,true); ch.setUint16(28,nm.length,true);
+    ch.setUint16(30,0,true); ch.setUint16(32,0,true); ch.setUint16(34,0,true); ch.setUint16(36,0,true);
+    ch.setUint32(38,0,true); ch.setUint32(42,off,true);
+    central.push(ch.buffer,nm);
+    off+=30+nm.length+size;
+  }
+  const cdSize=central.reduce((s,x)=>s+x.byteLength,0);
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true); eo.setUint16(4,0,true); eo.setUint16(6,0,true);
+  eo.setUint16(8,parts.length,true); eo.setUint16(10,parts.length,true);
+  eo.setUint32(12,cdSize,true); eo.setUint32(16,off,true); eo.setUint16(20,0,true);
+  return new Blob([...body,...central,eo.buffer],{type:'application/zip'});
+}
+
+// скидаємо список частин при виборі нового файлу
+$('file').addEventListener('change',()=>{parts=[];$('parts').innerHTML='';$('prog').style.display='none';});
+</script>
+</body>
+</html>
